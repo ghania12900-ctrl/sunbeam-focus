@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Sunbeam Focus - Dynamic Sanctuary</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #021024;
+      color: #caf0f8;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Glassmorphism Styling */
+    .sunbeam-glass {
+      background: rgba(2, 62, 138, 0.35);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(144, 224, 239, 0.25);
+    }
+
+    .sunbeam-glass-card {
+      background: rgba(3, 4, 94, 0.5);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(0, 180, 216, 0.35);
+      box-shadow: 0 8px 32px 0 rgba(0, 119, 182, 0.3);
+    }
+
+    /* Column Styling */
+    .task-col {
+      min-height: 260px;
+    }
+
+    /* Popping Animation */
+    .pop-anim {
+      animation: realisticPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes realisticPop {
+      0% { transform: scale(1); opacity: 1; }
+      40% { transform: scale(1.12); opacity: 0.9; filter: brightness(1.5); }
+      100% { transform: scale(0); opacity: 0; filter: brightness(2); }
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full flex flex-col justify-between relative pb-10">
+
+  <!-- Interactive Dynamic Background Canvas -->
+  <canvas id="bgCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+  <!-- Top Bar: Header & Nav Controls -->
+  <header class="relative z-10 w-full max-w-5xl mx-auto p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-full bg-cyan-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-cyan-500/50">☀️</div>
+      <div>
+        <h1 class="text-xl font-extrabold text-white tracking-tight">Sunbeam Focus</h1>
+        <p id="themeSubTitle" class="text-[10px] text-cyan-200/90 font-semibold">Oceanic Task & Goal Sanctuary</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs & Multi-Sound Ambient Selection -->
+    <div class="flex flex-wrap items-center justify-center gap-2">
+      <!-- Ambient Sound Mode Picker -->
+      <select id="ambientSelector" onchange="changeAmbientTrack()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-950/80 text-cyan-200 border border-cyan-300/40 focus:outline-none">
+        <option value="ocean">🌊 Ocean Waves</option>
+        <option value="rain">🌧️ Gentle Rain</option>
+        <option value="chimes">🔔 Zen Chimes</option>
+        <option value="meditation">🧘 Deep Meditation</option>
+      </select>
+
+      <!-- Ambient Sound Toggle Button -->
+      <button onclick="toggleAmbientSound()" id="ambientBtn" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/20 text-cyan-200 border border-cyan-300/40 hover:bg-cyan-400/30 transition flex items-center gap-1.5">
+        <span>🔇 Relaxing Sound: OFF</span>
+      </button>
+
+      <!-- Navigation Bar -->
+      <nav class="flex gap-1 sunbeam-glass p-1 rounded-2xl border border-cyan-300/30">
+        <button onclick="switchTab('tasks')" id="tab-tasks" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-300 text-slate-950 transition">🌊 Workspace</button>
+        <button onclick="switchTab('history')" id="tab-history" class="px-3 py-1.5 rounded-xl text-xs font-bold text-cyan-100 transition">📖 History</button>
+        <button onclick="switchTab('profile')" id="tab-profile" class="px-3 py-1.5 rounded-xl text-xs font-bold text-cyan-100 transition">👤 Profile</button>
+        <button onclick="switchTab('themes')" id="tab-themes" class="px-3 py-1.5 rounded-xl text-xs font-bold text-cyan-100 transition">🎨 Themes</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Dynamic Motivational Banner -->
+  <section class="relative z-10 w-full max-w-5xl mx-auto px-4 mb-3">
+    <div class="sunbeam-glass p-3 rounded-2xl border border-cyan-400/30 text-center shadow-md">
+      <p id="motivationalLetter" class="text-xs font-semibold text-cyan-100 italic">"Welcome to Sunbeam. Focus on small drops today, and watch massive waves form."</p>
+    </div>
+  </section>
+
+  <!-- TAB 1: WORKSPACE (Timer, Goals, 3 Columns) -->
+  <main id="view-tasks" class="relative z-10 w-full max-w-5xl mx-auto px-4 my-auto flex-1 flex flex-col gap-4">
+    
+    <!-- Timer & Main Goal Widget -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Focus Time Tracker Card -->
+      <div class="sunbeam-glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+        <span class="text-[10px] uppercase font-extrabold tracking-wider text-cyan-300 mb-1">⏱️ Focus Duration Tracker</span>
+        <div id="timerDisplay" class="text-3xl font-extrabold text-white tracking-wider my-1">00:00:00</div>
+        <div class="flex gap-2 mt-2 w-full">
+          <button onclick="toggleTimer()" id="timerBtn" class="flex-1 py-1.5 bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs rounded-xl transition shadow-md shadow-cyan-500/30">Start Focus</button>
+          <button onclick="resetTimer()" class="px-3 py-1.5 sunbeam-glass text-cyan-200 hover:text-white text-xs font-bold rounded-xl border border-cyan-400/30 transition">Reset</button>
+        </div>
+      </div>
+
+      <!-- Core Target & Daily Goal Card -->
+      <div class="md:col-span-2 sunbeam-glass-card p-4 rounded-2xl flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[10px] uppercase font-extrabold tracking-wider text-cyan-300">🎯 Daily Target Goal</span>
+          <span id="goalStatus" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-900/60 text-cyan-200 border border-cyan-500/30">In Progress</span>
+        </div>
+        <input type="text" id="dailyGoalInput" placeholder="Enter your main target goal for today..." class="w-full bg-slate-950/60 text-xs p-2.5 rounded-xl border border-cyan-300/30 text-white placeholder-cyan-200/40 focus:outline-none focus:border-cyan-300 mb-2"/>
+        <button onclick="completeDailyGoal()" class="w-full py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg transition">
+          ✓ Complete Goal & Record in History
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 3-Column Task Dropper System -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Column 1: Priority Tasks -->
+      <div class="task-col sunbeam-glass-card p-4 rounded-2xl flex flex-col">
+        <input type="text" value="🔥 Priority Drops" class="bg-transparent font-extrabold text-sm text-cyan-200 border-b border-cyan-400/30 pb-1 mb-3 focus:outline-none focus:border-cyan-300"/>
+        <div id="col-1-list" class="flex flex-col gap-2.5 flex-1"></div>
+        <button onclick="addTask('col-1-list')" class="mt-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 rounded-xl text-xs font-bold transition">+ Add Drop Task</button>
+      </div>
+
+      <!-- Column 2: In-Progress Drops -->
+      <div class="task-col sunbeam-glass-card p-4 rounded-2xl flex flex-col">
+        <input type="text" value="⚡ In-Progress Flow" class="bg-transparent font-extrabold text-sm text-cyan-200 border-b border-cyan-400/30 pb-1 mb-3 focus:outline-none focus:border-cyan-300"/>
+        <div id="col-2-list" class="flex flex-col gap-2.5 flex-1"></div>
+        <button onclick="addTask('col-2-list')" class="mt-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 rounded-xl text-xs font-bold transition">+ Add Drop Task</button>
+      </div>
+
+      <!-- Column 3: Daily Habits -->
+      <div class="task-col sunbeam-glass-card p-4 rounded-2xl flex flex-col">
+        <input type="text" value="✨ Micro Achievements" class="bg-transparent font-extrabold text-sm text-cyan-200 border-b border-cyan-400/30 pb-1 mb-3 focus:outline-none focus:border-cyan-300"/>
+        <div id="col-3-list" class="flex flex-col gap-2.5 flex-1"></div>
+        <button onclick="addTask('col-3-list')" class="mt-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 rounded-xl text-xs font-bold transition">+ Add Drop Task</button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- TAB 2: HISTORY BOOK -->
+  <main id="view-history" class="hidden relative z-10 w-full max-w-5xl mx-auto px-4 my-auto flex-1">
+    <div class="sunbeam-glass-card p-6 rounded-3xl">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-white">📖 Daily Goal History Book</h2>
+          <p class="text-xs text-cyan-200/80">Real-time record of all finished goals & popped drops.</p>
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <button onclick="renewDailyTasks()" class="flex-1 sm:flex-none px-4 py-2 bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg hover:bg-cyan-300 transition">
+            🔄 Renew Tasks For New Day
+          </button>
+          <button onclick="clearHistory()" class="px-3 py-2 bg-red-500/20 text-red-200 border border-red-400/30 font-bold text-xs rounded-xl hover:bg-red-500/30 transition">
+            🗑️ Clear
+          </button>
+        </div>
+      </div>
+      
+      <!-- Scrollable History Log Container -->
+      <div id="historyContainer" class="flex flex-col gap-2.5 max-h-[420px] overflow-y-auto pr-1">
+        <!-- Dynamically Populated -->
+      </div>
+    </div>
+  </main>
+
+  <!-- TAB 3: USER PROFILE -->
+  <main id="view-profile" class="hidden relative z-10 w-full max-w-5xl mx-auto px-4 my-auto flex-1">
+    <div class="sunbeam-glass-card p-6 rounded-3xl max-w-xl mx-auto">
+      <h2 class="text-xl font-bold text-white mb-1">👤 Developer Profile</h2>
+      <p class="text-xs text-cyan-200/80 mb-5">Personal data collection & settings. Zero email codes required.</p>
+      
+      <form onsubmit="saveProfile(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-cyan-200 mb-1">Full Name</label>
+          <input type="text" id="profileName" placeholder="Enter your name..." class="w-full bg-slate-950/70 p-3 rounded-xl border border-cyan-400/30 text-white text-xs focus:outline-none focus:border-cyan-300"/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-cyan-200 mb-1">Email Address</label>
+          <input type="email" id="profileEmail" placeholder="Enter your email..." class="w-full bg-slate-950/70 p-3 rounded-xl border border-cyan-400/30 text-white text-xs focus:outline-none focus:border-cyan-300"/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-cyan-200 mb-1">Personal Focus Track / Bio</label>
+          <textarea id="profileBio" rows="3" placeholder="Write your focus goals..." class="w-full bg-slate-950/70 p-3 rounded-xl border border-cyan-400/30 text-white text-xs focus:outline-none focus:border-cyan-300"></textarea>
+        </div>
+        <button type="submit" class="w-full py-3 bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg hover:bg-cyan-300 transition">
+          💾 Save Profile Info
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- TAB 4: THEME SELECTOR -->
+  <main id="view-themes" class="hidden relative z-10 w-full max-w-5xl mx-auto px-4 my-auto flex-1">
+    <div class="sunbeam-glass-card p-6 rounded-3xl">
+      <h2 class="text-xl font-bold text-white mb-1">🎨 Theme & Environment Sanctuary</h2>
+      <p class="text-xs text-cyan-200/80 mb-6">Choose your preferred visual atmosphere or follow real-time daylight.</p>
+      
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <button onclick="setTheme('ocean')" class="p-4 sunbeam-glass rounded-2xl text-left border border-cyan-400/30 hover:border-cyan-300 transition">
+          <span class="text-xl block mb-1">🌊</span>
+          <span class="text-xs font-bold text-white block">Ocean & Fishes</span>
+          <span class="text-[10px] text-cyan-200/70">Swimming fish, sand & waves</span>
+        </button>
+
+        <button onclick="setTheme('forest')" class="p-4 sunbeam-glass rounded-2xl text-left border border-emerald-400/30 hover:border-emerald-300 transition">
+          <span class="text-xl block mb-1">🌲</span>
+          <span class="text-xs font-bold text-white block">Pine Forest</span>
+          <span class="text-[10px] text-emerald-200/70">Drifting leaves & green canopy</span>
+        </button>
+
+        <button onclick="setTheme('desert')" class="p-4 sunbeam-glass rounded-2xl text-left border border-amber-400/30 hover:border-amber-300 transition">
+          <span class="text-xl block mb-1">🌵</span>
+          <span class="text-xs font-bold text-white block">Desert Dunes</span>
+          <span class="text-[10px] text-amber-200/70">Rolling sand dunes & warmth</span>
+        </button>
+
+        <button onclick="setTheme('jungle')" class="p-4 sunbeam-glass rounded-2xl text-left border border-lime-400/30 hover:border-lime-300 transition">
+          <span class="text-xl block mb-1">🌴</span>
+          <span class="text-xs font-bold text-white block">Deep Jungle</span>
+          <span class="text-[10px] text-lime-200/70">Glowing fireflies & lush canopy</span>
+        </button>
+
+        <button onclick="setTheme('rainy')" class="p-4 sunbeam-glass rounded-2xl text-left border border-blue-400/30 hover:border-blue-300 transition">
+          <span class="text-xl block mb-1">🌧️</span>
+          <span class="text-xs font-bold text-white block">Cozy Rainy Day</span>
+          <span class="text-[10px] text-blue-200/70">Rain streaks & storm blue</span>
+        </button>
+
+        <button onclick="setTheme('auto')" class="p-4 sunbeam-glass rounded-2xl text-left border border-purple-400/30 hover:border-purple-300 transition">
+          <span class="text-xl block mb-1">⏰</span>
+          <span class="text-xs font-bold text-white block">Auto Daylight</span>
+          <span class="text-[10px] text-purple-200/70">Follows morning/evening clock</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- JAVASCRIPT: LOGIC, REALISTIC CANVASES, HIGH-QUALITY SOUND ENGINE -->
+  <script>
+    // App State
+    let currentTheme = 'ocean';
+    let isAmbientPlaying = false;
+    let ambientNodes = [];
+
+    // Motivational Greeting Messages
+    const motivationalMessages = [
+      "Welcome back! Take a deep breath, pick a priority drop, and pop your goals.",
+      "Hello Creator! Turn task paralysis into deep flow state under relaxing waves.",
+      "Greetings! Focus on small drops today, and watch massive achievements form.",
+      "Welcome to Sunbeam Sanctuary! Every popped task moves you closer to mastery."
+    ];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Set random motivational letter
+      const msg = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
+      document.getElementById('motivationalLetter').innerText = `"${msg}"`;
+
+      // Load Saved Profile Data
+      document.getElementById('profileName').value = localStorage.getItem('sb_profile_name') || '';
+      document.getElementById('profileEmail').value = localStorage.getItem('sb_profile_email') || '';
+      document.getElementById('profileBio').value = localStorage.getItem('sb_profile_bio') || '';
+
+      // Initialize Defaults
+      seedInitialTasks();
+      loadHistory();
+      
+      // Auto Theme Detection Check
+      const savedTheme = localStorage.getItem('sb_user_theme');
+      if (savedTheme) {
+        setTheme(savedTheme);
+      } else {
+        setTheme('ocean');
+      }
+    });
+
+    // NAVIGATION TAB SWITCHER
+    function switchTab(tabId) {
+      const tabs = ['tasks', 'history', 'profile', 'themes'];
+      tabs.forEach(id => {
+        const view = document.getElementById(`view-${id}`);
+        const btn = document.getElementById(`tab-${id}`);
+        if (id === tabId) {
+          view.classList.remove('hidden');
+          btn.classList.add('bg-cyan-300', 'text-slate-950');
+          btn.classList.remove('text-cyan-100');
+        } else {
+          view.classList.add('hidden');
+          btn.classList.remove('bg-cyan-300', 'text-slate-950');
+          btn.classList.add('text-cyan-100');
+        }
+      });
+
+      if (tabId === 'history') loadHistory();
+    }
+
+    // THEME & ATMOSPHERE SYSTEM
+    function setTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('sb_user_theme', theme);
+
+      const subTitle = document.getElementById('themeSubTitle');
+      if (theme === 'auto') {
+        const hour = new Date().getHours();
+        if (hour >= 6 && hour < 12) theme = 'morning';
+        else if (hour >= 12 && hour < 18) theme = 'ocean';
+        else theme = 'evening';
+      }
+
+      if (theme === 'ocean') subTitle.innerText = "Oceanic Task & Goal Sanctuary";
+      else if (theme === 'forest') subTitle.innerText = "Pine Forest Focus Sanctuary";
+      else if (theme === 'desert') subTitle.innerText = "Warm Desert Dune Sanctuary";
+      else if (theme === 'jungle') subTitle.innerText = "Deep Jungle Firefly Sanctuary";
+      else if (theme === 'rainy') subTitle.innerText = "Cozy Rainy Day Focus";
+      else if (theme === 'morning') subTitle.innerText = "Morning Sunrise Sanctuary";
+      else if (theme === 'evening') subTitle.innerText = "Sunset Dusk Sanctuary";
+    }
+
+    // CANVAS REALISTIC ANIMATION ENGINE
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function resizeCanvas() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Ocean Fish Class with Swishing Tail
+    class Fish {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * (height * 0.6) + (height * 0.2);
+        this.size = Math.random() * 12 + 8;
+        this.speed = Math.random() * 1.2 + 0.4;
+        this.direction = Math.random() > 0.5 ? 1 : -1;
+        this.tailAngle = 0;
+        this.color = Math.random() > 0.5 ? 'rgba(0, 180, 216, 0.45)' : 'rgba(144, 224, 239, 0.35)';
+      }
+      update() {
+        this.x += this.speed * this.direction;
+        this.tailAngle += 0.12;
+        if (this.x > width + 40 || this.x < -40) this.reset();
+      }
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (this.direction === -1) ctx.scale(-1, 1);
+        
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.size, this.size / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const tailOffset = Math.sin(this.tailAngle) * 4;
+        ctx.beginPath();
+        ctx.moveTo(-this.size, 0);
+        ctx.lineTo(-this.size - (this.size / 1.8), (-this.size / 2) + tailOffset);
+        ctx.lineTo(-this.size - (this.size / 1.8), (this.size / 2) + tailOffset);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    // Environmental Particle
+    class EnvParticle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.size = Math.random() * 4 + 1;
+        this.speedY = Math.random() * 2 + 1;
+        this.speedX = (Math.random() - 0.5) * 1.5;
+        this.alpha = Math.random() * 0.7 + 0.3;
+      }
+      update() {
+        if (currentTheme === 'rainy') {
+          this.y += this.speedY * 5;
+          this.x += this.speedX;
+        } else if (currentTheme === 'jungle' || currentTheme === 'forest') {
+          this.y -= this.speedY * 0.3;
+          this.x += Math.sin(this.y * 0.02) * 0.5;
+        } else {
+          this.y += this.speedY * 0.5;
+        }
+
+        if (this.y > height || this.y < 0) this.reset();
+      }
+      draw() {
+        ctx.fillStyle = currentTheme === 'jungle' ? `rgba(163, 230, 53, ${this.alpha})` :
+                        currentTheme === 'rainy' ? `rgba(186, 230, 253, ${this.alpha})` :
+                        `rgba(253, 224, 71, ${this.alpha})`;
+        ctx.beginPath();
+        if (currentTheme === 'rainy') {
+          ctx.rect(this.x, this.y, 1.5, 12);
+        } else {
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+
+    // Pop Visual Particles
+    let popParticles = [];
+    class PopParticle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 6 + 2;
+        this.speedX = (Math.random() - 0.5) * 7;
+        this.speedY = (Math.random() - 0.5) * 7;
+        this.alpha = 1;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.alpha -= 0.035;
+      }
+      draw() {
+        ctx.fillStyle = `rgba(144, 224, 239, ${this.alpha})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const fishes = Array.from({ length: 8 }, () => new Fish());
+    const envParticles = Array.from({ length: 25 }, () => new EnvParticle());
+    let waveOffset = 0;
+
+    function renderBackground() {
+      ctx.clearRect(0, 0, width, height);
+
+      let activeTheme = currentTheme;
+      if (activeTheme === 'auto') {
+        const hour = new Date().getHours();
+        if (hour >= 6 && hour < 12) activeTheme = 'morning';
+        else if (hour >= 12 && hour < 18) activeTheme = 'ocean';
+        else activeTheme = 'evening';
+      }
+
+      let grad = ctx.createLinearGradient(0, 0, 0, height);
+      if (activeTheme === 'ocean') {
+        grad.addColorStop(0, '#00b4d8');
+        grad.addColorStop(0.5, '#0077b6');
+        grad.addColorStop(0.85, '#03045e');
+        grad.addColorStop(1, '#021024');
+      } else if (activeTheme === 'forest') {
+        grad.addColorStop(0, '#134e4a');
+        grad.addColorStop(0.6, '#064e3b');
+        grad.addColorStop(1, '#022c22');
+      } else if (activeTheme === 'desert') {
+        grad.addColorStop(0, '#f59e0b');
+        grad.addColorStop(0.5, '#d97706');
+        grad.addColorStop(1, '#78350f');
+      } else if (activeTheme === 'jungle') {
+        grad.addColorStop(0, '#15803d');
+        grad.addColorStop(0.6, '#14532d');
+        grad.addColorStop(1, '#052e16');
+      } else if (activeTheme === 'rainy') {
+        grad.addColorStop(0, '#334155');
+        grad.addColorStop(0.6, '#1e293b');
+        grad.addColorStop(1, '#0f172a');
+      } else if (activeTheme === 'morning') {
+        grad.addColorStop(0, '#38bdf8');
+        grad.addColorStop(0.5, '#818cf8');
+        grad.addColorStop(1, '#1e1b4b');
+      } else if (activeTheme === 'evening') {
+        grad.addColorStop(0, '#f43f5e');
+        grad.addColorStop(0.5, '#881337');
+        grad.addColorStop(1, '#0f172a');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      if (activeTheme === 'ocean') {
+        ctx.fillStyle = 'rgba(202, 240, 248, 0.15)';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        for (let x = 0; x <= width; x += 20) {
+          let y = Math.sin((x * 0.01) + waveOffset) * 8 + 25;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(width, 0);
+        ctx.closePath();
+        ctx.fill();
+        waveOffset += 0.03;
+
+        ctx.fillStyle = 'rgba(212, 163, 115, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(0, height);
+        for (let x = 0; x <= width; x += 30) {
+          let y = height - (Math.sin(x * 0.008) * 15 + 35);
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(width, height);
+        ctx.closePath();
+        ctx.fill();
+
+        fishes.forEach(f => { f.update(); f.draw(); });
+      } else {
+        envParticles.forEach(p => { p.update(); p.draw(); });
+      }
+
+      popParticles.forEach((p, idx) => {
+        p.update();
+        p.draw();
+        if (p.alpha <= 0) popParticles.splice(idx, 1);
+      });
+
+      requestAnimationFrame(renderBackground);
+    }
+    renderBackground();
+
+    // SOFT & ULTRA-RELAXING AUDIO SYNTHESIS ENGINE (Filter-Smoothed, Natural & Harshness-Free)
+    let popSynth = null;
+    let audioInitialized = false;
+
+    async function initAudioEngine() {
+      if (!audioInitialized) {
+        await Tone.start();
+        popSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.005, decay: 0.12, sustain: 0.01, release: 0.3 }
+        }).toDestination();
+        popSynth.volume.value = -8;
+        audioInitialized = true;
+      }
+    }
+
+    function stopAmbientAudio() {
+      Tone.Transport.stop();
+      Tone.Transport.cancel();
+      ambientNodes.forEach(node => {
+        try { node.dispose(); } catch(e){}
+      });
+      ambientNodes = [];
+    }
+
+    async function toggleAmbientSound() {
+      await initAudioEngine();
+      const btn = document.getElementById('ambientBtn');
+
+      if (!isAmbientPlaying) {
+        isAmbientPlaying = true;
+        startSelectedAmbientTrack();
+        btn.innerHTML = "🔊 Relaxing Sound: ON";
+        btn.classList.add('bg-cyan-400', 'text-slate-950');
+      } else {
+        isAmbientPlaying = false;
+        stopAmbientAudio();
+        btn.innerHTML = "🔇 Relaxing Sound: OFF";
+        btn.classList.remove('bg-cyan-400', 'text-slate-950');
+      }
+    }
+
+    function changeAmbientTrack() {
+      if (isAmbientPlaying) {
+        stopAmbientAudio();
+        startSelectedAmbientTrack();
+      }
+    }
+
+    function startSelectedAmbientTrack() {
+      stopAmbientAudio();
+      const mode = document.getElementById('ambientSelector').value;
+
+      if (mode === 'ocean') {
+        // Soft Ocean Shore Waves (Filtered Pink Noise + Gentle Swell)
+        const noise = new Tone.Noise("pink").start();
+        const filter = new Tone.Filter({ frequency: 280, type: "lowpass" });
+        const volume = new Tone.Volume(-20).toDestination();
+        noise.connect(filter);
+        filter.connect(volume);
+
+        const lfo = new Tone.LFO({ frequency: 0.1, min: 120, max: 480 }).start();
+        lfo.connect(filter.frequency);
+
+        ambientNodes.push(noise, filter, volume, lfo);
+
+      } else if (mode === 'rain') {
+        // Soothing Rain (Warm Soft Lowpass Noise)
+        const noise = new Tone.Noise("brown").start();
+        const filter = new Tone.Filter({ frequency: 450, type: "lowpass" });
+        const volume = new Tone.Volume(-18).toDestination();
+        noise.connect(filter);
+        filter.connect(volume);
+
+        ambientNodes.push(noise, filter, volume);
+
+      } else if (mode === 'chimes') {
+        // Relaxing Crystal Zen Chimes (Soft Pentatonic Sine Melodies)
+        const chimeSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.1, decay: 2, sustain: 0.2, release: 3 }
+        }).toDestination();
+        chimeSynth.volume.value = -16;
+
+        const loop = new Tone.Loop(time => {
+          const notes = ["C5", "E5", "G5", "A5", "C6", "D6"];
+          const note = notes[Math.floor(Math.random() * notes.length)];
+          chimeSynth.triggerAttackRelease(note, "2m", time);
+        }, "2n").start(0);
+
+        Tone.Transport.start();
+        ambientNodes.push(chimeSynth, loop);
+
+      } else if (mode === 'meditation') {
+        // Deep Warm Ambient Pad (Harmonies without harsh frequencies)
+        const padSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sine" },
+          envelope: { attack: 3, decay: 4, sustain: 0.8, release: 4 }
+        }).toDestination();
+        padSynth.volume.value = -18;
+
+        const loop = new Tone.Loop(time => {
+          padSynth.triggerAttackRelease(["F2", "C3", "A3", "C4"], "4m", time);
+        }, "4m").start(0);
+
+        Tone.Transport.start();
+        ambientNodes.push(padSynth, loop);
+      }
+    }
+
+    function playPopSound() {
+      if (popSynth && audioInitialized) {
+        const now = Tone.now();
+        popSynth.triggerAttackRelease("E5", "16n", now);
+        popSynth.triggerAttackRelease("B5", "16n", now + 0.03);
+      }
+    }
+
+    // TASK MANAGEMENT & REALISTIC POPPING
+    function seedInitialTasks() {
+      if (document.getElementById('col-1-list').children.length === 0) {
+        addTask('col-1-list', 'Research project requirements');
+        addTask('col-2-list', 'Design UI component layouts');
+        addTask('col-3-list', 'Hydrate & take rest breaks');
+      }
+    }
+
+    function addTask(containerId, initialVal = '') {
+      const container = document.getElementById(containerId);
+      const taskId = 'task-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+      const card = document.createElement('div');
+      card.id = taskId;
+      card.className = "sunbeam-glass p-2.5 rounded-xl flex items-center justify-between border border-cyan-400/20 hover:border-cyan-300 transition";
+      
+      card.innerHTML = `
+        <input type="text" value="${initialVal}" placeholder="Enter task title..." class="bg-transparent text-xs text-white placeholder-cyan-200/40 focus:outline-none flex-1 pr-2 font-medium"/>
+        <button onclick="popTask('${taskId}')" class="px-2.5 py-1 bg-cyan-400/20 hover:bg-cyan-400/40 text-cyan-200 border border-cyan-300/40 rounded-lg text-[10px] font-bold transition flex items-center gap-1 active:scale-95">
+          <span>💧 Pop</span>
+        </button>
+      `;
+
+      container.appendChild(card);
+    }
+
+    function popTask(taskId) {
+      initAudioEngine();
+      playPopSound();
+
+      const el = document.getElementById(taskId);
+      if (!el) return;
+
+      const inputVal = el.querySelector('input').value.trim() || 'Popped Micro Drop';
+
+      const rect = el.getBoundingClientRect();
+      for (let i = 0; i < 14; i++) {
+        popParticles.push(new PopParticle(rect.left + rect.width / 2, rect.top + rect.height / 2));
+      }
+
+      recordHistory(inputVal, "Popped Drop Task");
+
+      el.classList.add('pop-anim');
+      setTimeout(() => {
+        el.remove();
+      }, 400);
+    }
+
+    // TIMER TRACKER LOGIC
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let isTimerRunning = false;
+
+    function toggleTimer() {
+      if (isTimerRunning) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isTimerRunning = false;
+        document.getElementById('timerBtn').innerText = "Resume Focus";
+      } else {
+        isTimerRunning = true;
+        document.getElementById('timerBtn').innerText = "Pause";
+        timerInterval = setInterval(() => {
+          timerSeconds++;
+          updateTimerDisplay();
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      isTimerRunning = false;
+      timerSeconds = 0;
+      updateTimerDisplay();
+      document.getElementById('timerBtn').innerText = "Start Focus";
+    }
+
+    function updateTimerDisplay() {
+      const hrs = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((timerSeconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = (timerSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${hrs}:${mins}:${secs}`;
+    }
+
+    // GOAL & HISTORY LOGIC
+    function completeDailyGoal() {
+      const goalInput = document.getElementById('dailyGoalInput');
+      const val = goalInput.value.trim();
+      if (!val) {
+        alert("Please enter a target goal first.");
+        return;
+      }
+
+      document.getElementById('goalStatus').innerText = "Completed ✓";
+      document.getElementById('goalStatus').className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40";
+
+      recordHistory(val, "Main Target Goal");
+      alert("🎉 Target Goal Completed & Recorded in History Book!");
+    }
+
+    function recordHistory(title, type) {
+      const history = JSON.parse(localStorage.getItem('sb_history_log') || '[]');
+      const newEntry = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        title: title,
+        type: type,
+        duration: document.getElementById('timerDisplay').innerText
+      };
+      history.unshift(newEntry);
+      localStorage.setItem('sb_history_log', JSON.stringify(history));
+      loadHistory();
+    }
+
+    function loadHistory() {
+      const history = JSON.parse(localStorage.getItem('sb_history_log') || '[]');
+      const container = document.getElementById('historyContainer');
+
+      if (!container) return;
+
+      if (history.length === 0) {
+        container.innerHTML = `<p class="text-xs text-cyan-200/60 italic text-center py-8">No history logged yet. Complete a target goal or pop a task to record achievements!</p>`;
+        return;
+      }
+
+      container.innerHTML = history.map(item => `
+        <div class="sunbeam-glass p-3 rounded-xl flex justify-between items-center border border-cyan-400/20">
+          <div>
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded ${item.type === 'Main Target Goal' ? 'bg-cyan-400/20 text-cyan-200' : 'bg-blue-500/20 text-blue-200'} border border-cyan-300/30">${item.type}</span>
+              <span class="text-[10px] text-cyan-200/70 font-semibold">${item.date} at ${item.time}</span>
+            </div>
+            <p class="text-xs font-bold text-white">${item.title}</p>
+          </div>
+          <span class="text-[10px] font-mono bg-slate-950/60 px-2.5 py-1 rounded-lg border border-cyan-500/30 text-cyan-200">⏱️ ${item.duration}</span>
+        </div>
+      `).join('');
+    }
+
+    function clearHistory() {
+      if (confirm("Clear all history entries?")) {
+        localStorage.removeItem('sb_history_log');
+        loadHistory();
+      }
+    }
+
+    function renewDailyTasks() {
+      document.getElementById('col-1-list').innerHTML = '';
+      document.getElementById('col-2-list').innerHTML = '';
+      document.getElementById('col-3-list').innerHTML = '';
+      document.getElementById('dailyGoalInput').value = '';
+      document.getElementById('goalStatus').innerText = "In Progress";
+      document.getElementById('goalStatus').className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-900/60 text-cyan-200 border border-cyan-500/30";
+      
+      resetTimer();
+      seedInitialTasks();
+      switchTab('tasks');
+      alert("🔄 Workspace Renewed for a Fresh Day!");
+    }
+
+    // PROFILE SAVER
+    function saveProfile(e) {
+      e.preventDefault();
+      localStorage.setItem('sb_profile_name', document.getElementById('profileName').value);
+      localStorage.setItem('sb_profile_email', document.getElementById('profileEmail').value);
+      localStorage.setItem('sb_profile_bio', document.getElementById('profileBio').value);
+      alert("👤 Profile Information Saved Locally!");
+    }
+  </script>
+</body>
+</html>
+
