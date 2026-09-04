@@ -752,10 +752,9 @@
         alert("Please enter a target goal first.");
         return;
       }
-
-      document.getElementById('goalStatus').innerText = "Completed ✓";
-      document.getElementById('goalStatus').className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40";
-
+document.getElementById('goalStatus').innerText = "Completed";
+document.getElementById('goalStatus').className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40";
+      
       recordHistory(val, "Main Target Goal");
       alert("🎉 Target Goal Completed & Recorded in History Book!");
     }
